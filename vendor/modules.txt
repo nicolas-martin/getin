@@ -1,0 +1,9 @@
+# github.com/blang/semver v3.5.1+incompatible
+github.com/blang/semver
+# github.com/tebeka/selenium v0.9.9
+## explicit
+github.com/tebeka/selenium
+github.com/tebeka/selenium/chrome
+github.com/tebeka/selenium/firefox
+github.com/tebeka/selenium/internal/zip
+github.com/tebeka/selenium/log
