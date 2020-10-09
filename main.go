@@ -34,15 +34,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	//	Mon Jan 2 15:04:05 -0700 MST 2006
+	// Mon Jan 2 15:04:05 -0700 MST 2006
 	parsedTime, err := time.Parse("01/02/2006 15:04", fmt.Sprintf("%s %s", date, classTime))
 	if err != nil {
 		panic(err)
 	}
-	_ = parsedTime
 
-	// classTimer := time.NewTimer(parsedTime.Sub(time.Now()))
-	classTimer := time.NewTimer(5 * time.Second)
+	classTimer := time.NewTimer(parsedTime.Sub(time.Now()))
 
 	for {
 		select {
