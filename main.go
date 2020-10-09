@@ -6,16 +6,55 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/tebeka/selenium"
 )
 
 func main() {
+	classTime := os.Getenv("time")
+	if len(classTime) == 0 {
+		fmt.Println("Invalid class time")
+		os.Exit(1)
+	}
+	username := os.Getenv("username")
+	if len(username) == 0 {
+		fmt.Println("Invalid username")
+		os.Exit(1)
+	}
+	password := os.Getenv("password")
+	if len(password) == 0 {
+		fmt.Println("Invalid password")
+		os.Exit(1)
+	}
+	date := os.Getenv("date")
+	if len(date) == 0 {
+		fmt.Println("Invalid date")
+		os.Exit(1)
+	}
+
+	//	Mon Jan 2 15:04:05 -0700 MST 2006
+	parsedTime, err := time.Parse("01/02/2006 15:04", fmt.Sprintf("%s %s", date, classTime))
+	if err != nil {
+		panic(err)
+	}
+	_ = parsedTime
+
+	// classTimer := time.NewTimer(parsedTime.Sub(time.Now()))
+	classTimer := time.NewTimer(5 * time.Second)
+
+	for {
+		select {
+		case <-classTimer.C:
+			DoTheThing(username, password, classTime, date)
+		}
+	}
+}
+func DoTheThing(username, password, classTime, date string) {
+	// time.NewTimer
 
 	browserPath := GetBrowserPath("chromedriver")
-	fmt.Println("--")
-	fmt.Println(browserPath)
 	// browserPath := "/Users/nmartin/go/src/github.com/tebeka/selenium/vendor/chromedriver"
 	port, err := pickUnusedPort()
 
@@ -46,7 +85,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = loginTxt.SendKeys(os.Getenv("username"))
+	err = loginTxt.SendKeys(username)
 	if err != nil {
 		panic(err)
 	}
@@ -56,7 +95,7 @@ func main() {
 		panic(err)
 	}
 
-	err = passTxt.SendKeys(os.Getenv("password"))
+	err = passTxt.SendKeys(password)
 	if err != nil {
 		panic(err)
 	}
@@ -110,34 +149,38 @@ func main() {
 		panic(err)
 	}
 
-	if err = dateTxt.SendKeys(os.Getenv("date")); err != nil {
+	if err = dateTxt.SendKeys(date); err != nil {
 		panic(err)
 	}
 
 	if err = dateTxt.SendKeys(selenium.EnterKey); err != nil {
 		panic(err)
 	}
-	fmt.Println("waiting")
-	wd.SetImplicitWaitTimeout(4 * time.Second)
-	fmt.Println("clicking")
 
-	// document.querySelector("#AthleteTheme_wt6_block_wtMainContent_wt9_wtClassTable")
 	calendarTableInitial, err := wd.FindElement(selenium.ByCSSSelector, ".TableRecords")
 	if err != nil {
 		panic(err)
 	}
-	initialSize, _ := calendarTableInitial.Size()
-	tableSizeChanged := func(wd selenium.WebDriver) (bool, error) {
+
+	initialText, err := calendarTableInitial.Text()
+	if err != nil {
+		panic(err)
+	}
+
+	tableTextChanged := func(wd selenium.WebDriver) (bool, error) {
 		t, err := wd.FindElement(selenium.ByCSSSelector, ".TableRecords")
-		s, _ := t.Size()
+		if err != nil {
+			return false, err
+		}
+		s, err := t.Text()
 		if err != nil {
 			return false, err
 		}
 
-		return s != initialSize, nil
+		return s != initialText, nil
 	}
 
-	wd.Wait(tableSizeChanged)
+	wd.Wait(tableTextChanged)
 
 	calendarTable, err := wd.FindElement(selenium.ByCSSSelector, ".TableRecords")
 	if err != nil {
@@ -148,39 +191,31 @@ func main() {
 		panic(err)
 	}
 
-	for _, v := range text {
-		span, err := v.FindElement(selenium.ByTagName, "span")
+	for _, tr := range text {
+		span, err := tr.FindElement(selenium.ByTagName, "span")
 		if err != nil {
 			panic(err)
 		}
+		spanText, err := span.Text()
+		if err != nil {
+			panic(err)
+		}
+		if strings.Contains(spanText, classTime) {
+			td, err := tr.FindElement(selenium.ByXPATH, "//*/td[3]/div/a")
+			if err != nil {
+				panic(err)
+			}
 
-		fmt.Println(span.Text())
+			err = td.Click()
+			if err != nil {
+				panic(err)
+			}
+			break
+		}
+
 	}
 
-	// tableTr, err := calendarTable.FindElements(selenium.ByTagName, "tr")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	//*[@id="AthleteTheme_wt6_block_wtMainContent_wt9_wtClassTable"]/tbody/tr[4]/td[1]/div/span
-	// for _, v := range tableTr {
-	//*[@id="WebForm1"]/div[5]/div[2]/div[2]/div/span/table/tbody/tr[3]/td[1]/div/span
-	// tr, err := v.FindElement(selenium.ByCSSSelector, "td:nth-child(1) > div > span")
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// // text, err := tr.Text()
-	// // if err != nil {
-	// // 	panic(err)
-	// // }
-
-	// text, _ := tr.Text()
-	// fmt.Println(text)
-
-	// }
-
-	time.Sleep(10 * time.Second)
-
+	fmt.Println("Successfully registered")
 	defer service.Stop()
 }
 
